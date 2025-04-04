@@ -3,14 +3,14 @@ from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 
-# Database setup
+# creating slq lite database
 DATABASE_URL = "sqlite:///./students.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Association table for student-subject relationship
-student_subject_association = Table(
+# creating table for student-subject relationship
+student_subject = Table(
     "student_subject",
     Base.metadata,
     Column("student_id", Integer, ForeignKey("students.id")),
@@ -18,7 +18,7 @@ student_subject_association = Table(
 )
 
 
-# Models
+# creating student, subject, score models
 class Student(Base):
     __tablename__ = "students"
     id = Column(Integer, primary_key=True, index=True)
@@ -26,7 +26,7 @@ class Student(Base):
     surname = Column(String, index=True)
     subjects = relationship(
         "Subject",
-        secondary=student_subject_association,
+        secondary=student_subject,
         back_populates="students",
     )
     scores = relationship("Score", back_populates="student")
@@ -38,7 +38,7 @@ class Subject(Base):
     name = Column(String, unique=True, index=True)
     students = relationship(
         "Student",
-        secondary=student_subject_association,
+        secondary=student_subject,
         back_populates="subjects",
     )
     scores = relationship("Score", back_populates="subject")
@@ -54,10 +54,10 @@ class Score(Base):
     subject = relationship("Subject", back_populates="scores")
 
 
-# Create tables
+# creating tables
 Base.metadata.create_all(bind=engine)
 
-# FastAPI app instance
+# starting fastapi
 app = FastAPI()
 
 
@@ -69,7 +69,10 @@ def get_db():
         db.close()
 
 
-# Routes
+# making endpoints for updating, geting and deleting data
+
+
+# create sdudent
 @app.post("/students/")
 def create_student(name: str, surname: str, db: Session = Depends(get_db)):
     student = Student(name=name, surname=surname)
@@ -79,11 +82,13 @@ def create_student(name: str, surname: str, db: Session = Depends(get_db)):
     return student
 
 
+# getting all student
 @app.get("/students/")
 def get_students(db: Session = Depends(get_db)):
     return db.query(Student).all()
 
 
+# getting specific student using id
 @app.get("/students/{student_id}")
 def get_student(student_id: int, db: Session = Depends(get_db)):
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -92,6 +97,7 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
     return student
 
 
+# updating specific student using student id
 @app.put("/students/{student_id}")
 def update_student(
     student_id: int,
@@ -111,6 +117,7 @@ def update_student(
     return student
 
 
+# delete student with student id
 @app.delete("/students/{student_id}")
 def delete_student(student_id: int, db: Session = Depends(get_db)):
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -121,6 +128,7 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     return {"message": "Student deleted"}
 
 
+# create subject
 @app.post("/subjects/")
 def create_subject(name: str, db: Session = Depends(get_db)):
     subject = Subject(name=name)
@@ -130,11 +138,13 @@ def create_subject(name: str, db: Session = Depends(get_db)):
     return subject
 
 
+# getting all subjects
 @app.get("/subjects/")
 def get_subjects(db: Session = Depends(get_db)):
     return db.query(Subject).all()
 
 
+# deleting subject using subject id
 @app.delete("/subjects/{subject_id}")
 def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
@@ -145,6 +155,7 @@ def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     return {"message": "Subject deleted"}
 
 
+# create score table
 @app.post("/scores/")
 def add_score(
     student_id: int, subject_id: int, score: int, db: Session = Depends(get_db)
@@ -156,11 +167,13 @@ def add_score(
     return new_score
 
 
+# gett all the scores with subject id and student id
 @app.get("/scores/")
 def get_scores(db: Session = Depends(get_db)):
     return db.query(Score).all()
 
 
+# get score with score_id
 @app.get("/scores/{score_id}")
 def get_score(score_id: int, db: Session = Depends(get_db)):
     score = db.query(Score).filter(Score.id == score_id).first()
@@ -169,6 +182,7 @@ def get_score(score_id: int, db: Session = Depends(get_db)):
     return score
 
 
+# getting specific score data with score id
 @app.delete("/scores/{score_id}")
 def delete_score(score_id: int, db: Session = Depends(get_db)):
     score = db.query(Score).filter(Score.id == score_id).first()
